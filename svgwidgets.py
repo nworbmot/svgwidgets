@@ -38,7 +38,7 @@ from __future__ import print_function, division
 
 
 
-__version__ = "0.1"
+__version__ = "0.2"
 __author__ = "Tom Brown"
 __copyright__ = "Copyright 2014 Tom Brown, GNU GPL 3"
 
@@ -59,9 +59,21 @@ import json, sys
 # the class definitions all follow the general outline for SVG tagName:
 
 # class TagNameWidget:
-#     _tag_name = "tagName"
-#     _fertile = "no"
-#     _attributes = {"x" : 40}
+#     tag_name = "tagName"
+#     attributes = {"x" : 40}
+
+# the SVG attributes are listed with their default values
+
+# the attributes and _view_name are then promoted later to traitlets
+# to avoid lots of boilerplate
+
+
+# the classes inherit from widgets.ContainerWidget if they can have
+# children (like svg and g; later indicated by klass.fertile = "yes")
+# or inherit from widgets.DOMWidget if the cannot have children (like
+# rect and path;  later indicated by klass.fertile = "no")
+
+
 
 class SVGWidget(widgets.ContainerWidget):
     tag_name = "svg"
@@ -78,11 +90,16 @@ class RectWidget(widgets.DOMWidget):
     attributes = {"x" : 10,"y" : 10,"fill" : "blue","stroke" : "red","width" : 100,"height" : 50 }
 
 
+
+# get all Widget classes
+
 class_names = filter(lambda name: name.endswith("Widget"), locals())
 
 this_module = sys.modules[__name__]
 
 class_dict = { class_name : getattr(this_module,class_name) for class_name in class_names}
+
+
 
 # make all attributes and _view_name into traitlets
 
@@ -128,6 +145,7 @@ for class_name, klass in class_dict.iteritems():
 
 
 
+
 # prepare data to send to Javascript
 
 widget_properties = { class_name : {"tag_name" : klass.tag_name,
@@ -136,6 +154,11 @@ widget_properties = { class_name : {"tag_name" : klass.tag_name,
                                     "attributes" : klass.attributes.keys()} for class_name,klass in class_dict.iteritems() }
 
 
+# set data in global scope
+
 display(Javascript("window.widget_properties = " + json.dumps(widget_properties)))
+
+
+# execute code to set up Javascript View classes
 
 display(Javascript("svgwidgets.js"))

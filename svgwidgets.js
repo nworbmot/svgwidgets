@@ -25,9 +25,12 @@
 
 
 
-
+// code the define our new Backbone.js View objects
 
 require(["widgets/js/widget"], function(WidgetManager){
+
+    // widget_properties is put into the global scope by svgwidgets.py
+    // and contains a list of class names with their properties
     
     for(var class_name in widget_properties){
         

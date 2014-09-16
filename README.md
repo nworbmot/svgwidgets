@@ -1,13 +1,13 @@
 
 
-# SVG Widgets for the iPython notebook
+# SVG widgets for the iPython notebook
 
 
-This is a library of Scalar Vector Graphic (SVG) Widgets for the
-iPython notebook (only versions 2.0 onwards have support for
-Widgets). Widgets allow easy synchronisation of data between the
-Python backend and Javascript frontend. This library implements this
-functionality for SVG elements.
+This is a library of Scalar Vector Graphic (SVG) widgets for the
+iPython notebook (widgets are available in iPython version 2.0
+onwards). Widgets allow easy synchronisation of objects between the
+Python backend and Javascript/DOM frontend. This library implements
+this functionality for SVG elements.
 
 Currently it is only a demonstration of the functionality; more useful
 features will be added soon.
