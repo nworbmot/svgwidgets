@@ -82,12 +82,32 @@ class SVGWidget(widgets.ContainerWidget):
 
 class GroupWidget(widgets.ContainerWidget):
     tag_name = "g"
-    attributes = {}
+    attributes = {"transform": ""}
 
 
 class RectWidget(widgets.DOMWidget):
     tag_name = "rect"
-    attributes = {"x" : 10,"y" : 10,"fill" : "blue","stroke" : "red","width" : 100,"height" : 50 }
+    attributes = {"x" : 10,"y" : 10, "width" : 100,"height" : 50, "fill" : "blue", "fill-opacity" : 0.5, "stroke" : "red", "stroke-width" : "3"}
+
+
+class CircleWidget(widgets.DOMWidget):
+    tag_name = "circle"
+    attributes = {"cx" : 50,"cy" : 110, "r" : 20, "fill" : "red", "fill-opacity" : 0.5, "stroke" : "green", "stroke-width" : "3" ,"transform": ""}
+
+
+class EllipseWidget(widgets.DOMWidget):
+    tag_name = "ellipse"
+    attributes = {"cx" : 250,"cy" : 110, "rx" : 20, "ry" : 10, "fill" : "magenta", "fill-opacity" : 0.5, "stroke" : "cyan", "stroke-width" : "3" ,"transform": ""}
+
+
+class LineWidget(widgets.DOMWidget):
+    tag_name = "line"
+    attributes = {"x1" : 10,"y1" : 200,"x2" : 100,"y2" : 200,  "stroke" : "orange", "stroke-width" : "3","transform": ""}
+
+
+class PathWidget(widgets.DOMWidget):
+    tag_name = "path"
+    attributes = {"d" : "M 10,250 C70,150 200,150 200,250", "stroke" : "black", "stroke-width" : "3", "fill" : "cyan", "fill-opacity" : 0.5, "transform": ""}
 
 
 
@@ -132,14 +152,19 @@ for class_name, klass in class_dict.iteritems():
             setattr(klass,name,traitlets.Unicode(default, sync=True))
  
         traitlet = getattr(klass,name)
+
         
-        # I don't understand where these variables get set in the official version
+        # I don't understand where traitlet.name and
+        # traitlet.this_class get set in the official code, but the
+        # following sets them:
+
         # class Rect(DOMWidget):
         #     thingie = traitlets.Float(11.5, sync=True)
-        # is different to:
-        # Rect.thingie = 
-        
-        
+
+        # while this doesn't:
+
+        # Rect.thingie = traitlets.Float(11.5, sync=True)
+                
         traitlet.name = name
         traitlet.this_class = klass
 

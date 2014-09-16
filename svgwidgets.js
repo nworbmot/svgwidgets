@@ -71,13 +71,11 @@ require(["widgets/js/widget"], function(WidgetManager){
 
 		// render any children with the ContainerView render method
                 if(this.fertile === "yes"){
-		    NewView.__super__.render.apply(this);
+		    this.constructor.__super__.render.apply(this);
 		}
                 
 		// make sure all attributes, etc., are up-to-date
                 this.update();
-
-
             },
         
             update: function(){
@@ -90,7 +88,7 @@ require(["widgets/js/widget"], function(WidgetManager){
                     this.el.setAttribute(name,value);
                 }    
             
-                NewView.__super__.update.apply(this);  
+                this.constructor.__super__.update.apply(this);
             }
             
             
