@@ -54,6 +54,8 @@ require(["widgets/js/widget"], function(WidgetManager){
             // store the properties we need for each class
             
             fertile: fertile,
+
+	    draggable: widget_properties[class_name]["draggable"],
             
 	    // note that this.attributes is reserved by Backbone.js
             svg_attributes: widget_properties[class_name]["attributes"],
@@ -73,7 +75,14 @@ require(["widgets/js/widget"], function(WidgetManager){
                 if(this.fertile === "yes"){
 		    this.constructor.__super__.render.apply(this);
 		}
-                
+		
+		// make element draggable if required
+                if(this.draggable === "yes"){
+		    this.selected = false;
+		    this.translateX = 0.0;
+		    this.translateY = 0.0;
+		    this.make_draggable();
+		}
 		// make sure all attributes, etc., are up-to-date
                 this.update();
             },
@@ -89,8 +98,42 @@ require(["widgets/js/widget"], function(WidgetManager){
                 }    
             
                 this.constructor.__super__.update.apply(this);
-            }
-            
+            },
+
+	    make_draggable: function(){
+
+		var that = this;
+
+		this.$el.on('mousedown', function(event){
+		    that.selected = true;
+		    that.startX = event.pageX;
+		    that.startY = event.pageY;
+		    that.newX = that.translateX;
+		    that.newY = that.translateY;
+		}).on('mousemove', function(event){
+		    if(that.selected){
+			that.newX = that.translateX + event.pageX - that.startX;
+			that.newY = that.translateY + event.pageY - that.startY;
+			var transform = "translate(" + that.newX + "," + that.newY + ")";
+			that.model.set("transform",transform);
+			that.touch();
+		    }}).on('mouseup',function(event){
+			if(that.selected){
+			    that.translateX = that.newX;
+			    that.translateY = that.newY;
+			    that.selected = false;
+			}
+		    }).on('mouseout',function(event){
+			if(that.selected){
+			    that.translateX = that.newX;
+			    that.translateY = that.newY;
+			    that.selected = false;
+			}
+		    });
+
+	    }            
+
+
             
         });
 

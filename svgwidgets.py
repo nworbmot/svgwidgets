@@ -61,6 +61,7 @@ import json, sys
 # class TagNameWidget:
 #     tag_name = "tagName"
 #     attributes = {"x" : 40}
+#     draggable = "no"
 
 # the SVG attributes are listed with their default values
 
@@ -78,36 +79,43 @@ import json, sys
 class SVGWidget(widgets.ContainerWidget):
     tag_name = "svg"
     attributes = {"width" : 400, "height" : 300}
+    draggable = "no"
 
 
 class GroupWidget(widgets.ContainerWidget):
     tag_name = "g"
     attributes = {"transform": ""}
+    draggable = "no"
 
 
 class RectWidget(widgets.DOMWidget):
     tag_name = "rect"
-    attributes = {"x" : 10,"y" : 10, "width" : 100,"height" : 50, "fill" : "blue", "fill-opacity" : 0.5, "stroke" : "red", "stroke-width" : "3"}
+    attributes = {"x" : 10,"y" : 10, "width" : 100,"height" : 50, "fill" : "blue", "fill-opacity" : 0.5, "stroke" : "red", "stroke-width" : "3", "transform" : ""}
+    draggable = "yes"
 
 
 class CircleWidget(widgets.DOMWidget):
     tag_name = "circle"
     attributes = {"cx" : 50,"cy" : 110, "r" : 20, "fill" : "red", "fill-opacity" : 0.5, "stroke" : "green", "stroke-width" : "3" ,"transform": ""}
+    draggable = "yes"
 
 
 class EllipseWidget(widgets.DOMWidget):
     tag_name = "ellipse"
     attributes = {"cx" : 250,"cy" : 110, "rx" : 20, "ry" : 10, "fill" : "magenta", "fill-opacity" : 0.5, "stroke" : "cyan", "stroke-width" : "3" ,"transform": ""}
+    draggable = "yes"
 
 
 class LineWidget(widgets.DOMWidget):
     tag_name = "line"
     attributes = {"x1" : 10,"y1" : 200,"x2" : 100,"y2" : 200,  "stroke" : "orange", "stroke-width" : "3","transform": ""}
+    draggable = "yes"
 
 
 class PathWidget(widgets.DOMWidget):
     tag_name = "path"
     attributes = {"d" : "M 10,250 C70,150 200,150 200,250", "stroke" : "black", "stroke-width" : "3", "fill" : "cyan", "fill-opacity" : 0.5, "transform": ""}
+    draggable = "yes"
 
 
 
@@ -176,7 +184,8 @@ for class_name, klass in class_dict.iteritems():
 widget_properties = { class_name : {"tag_name" : klass.tag_name,
                                     "fertile" : klass.fertile,
                                     "view_name" : class_name.replace("Widget","View"),
-                                    "attributes" : klass.attributes.keys()} for class_name,klass in class_dict.iteritems() }
+                                    "attributes" : klass.attributes.keys(),
+                                    "draggable" : klass.draggable} for class_name,klass in class_dict.iteritems() }
 
 
 # set data in global scope
