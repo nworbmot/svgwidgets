@@ -52,7 +52,7 @@ from IPython.display import display, Javascript
 # the traitlets take care of communication between frontend and backend
 from IPython.utils import traitlets
 
-# use json to send code to the frontend
+# use json to send data to the frontend
 import json, sys
 
 
@@ -61,7 +61,7 @@ import json, sys
 # class TagNameWidget:
 #     tag_name = "tagName"
 #     attributes = {"x" : 40}
-#     draggable = "no"
+#     draggable = False
 
 # the SVG attributes are listed with their default values
 
@@ -70,52 +70,60 @@ import json, sys
 
 
 # the classes inherit from widgets.ContainerWidget if they can have
-# children (like svg and g; later indicated by klass.fertile = "yes")
+# children (like svg and g; later indicated by klass.fertile = True)
 # or inherit from widgets.DOMWidget if the cannot have children (like
-# rect and path;  later indicated by klass.fertile = "no")
+# rect and path;  later indicated by klass.fertile = False)
 
 
 
 class SVGWidget(widgets.ContainerWidget):
     tag_name = "svg"
     attributes = {"width" : 400, "height" : 300}
-    draggable = "no"
+    draggable = False
 
 
 class GroupWidget(widgets.ContainerWidget):
     tag_name = "g"
     attributes = {"transform": ""}
-    draggable = "no"
+    draggable = False
 
 
 class RectWidget(widgets.DOMWidget):
     tag_name = "rect"
     attributes = {"x" : 10,"y" : 10, "width" : 100,"height" : 50, "fill" : "blue", "fill-opacity" : 0.5, "stroke" : "red", "stroke-width" : "3", "transform" : ""}
-    draggable = "yes"
+    draggable = True
 
 
 class CircleWidget(widgets.DOMWidget):
     tag_name = "circle"
     attributes = {"cx" : 50,"cy" : 110, "r" : 20, "fill" : "red", "fill-opacity" : 0.5, "stroke" : "green", "stroke-width" : "3" ,"transform": ""}
-    draggable = "yes"
+    draggable = True
 
 
 class EllipseWidget(widgets.DOMWidget):
     tag_name = "ellipse"
     attributes = {"cx" : 250,"cy" : 110, "rx" : 20, "ry" : 10, "fill" : "magenta", "fill-opacity" : 0.5, "stroke" : "cyan", "stroke-width" : "3" ,"transform": ""}
-    draggable = "yes"
+    draggable = True
 
 
 class LineWidget(widgets.DOMWidget):
     tag_name = "line"
-    attributes = {"x1" : 10,"y1" : 200,"x2" : 100,"y2" : 200,  "stroke" : "orange", "stroke-width" : "3","transform": ""}
-    draggable = "yes"
+    attributes = {"x1" : 10,"y1" : 200,"x2" : 100,"y2" : 150,  "stroke" : "orange", "stroke-width" : "3","transform": ""}
+    draggable = True
 
 
 class PathWidget(widgets.DOMWidget):
     tag_name = "path"
     attributes = {"d" : "M 10,250 C70,150 200,150 200,250", "stroke" : "black", "stroke-width" : "3", "fill" : "cyan", "fill-opacity" : 0.5, "transform": ""}
-    draggable = "yes"
+    draggable = True
+
+
+class TextWidget(widgets.DOMWidget):
+    tag_name = "text"
+    attributes = {"x" : 100, "y" : 100,  "fill" : "black"}
+    draggable = True
+    content = "Hello World!"
+
 
 
 
@@ -133,19 +141,30 @@ class_dict = { class_name : getattr(this_module,class_name) for class_name in cl
 
 for class_name, klass in class_dict.iteritems():
 
-
+    
+    # classify whether the class can have children based on parent class
     base_class = klass.__bases__[0]
     if base_class.__name__ == "DOMWidget":
-        klass.fertile = "no"
+        klass.fertile = False
     elif base_class.__name__ == "ContainerWidget":
-        klass.fertile = "yes"
+        klass.fertile = True
 
 
-    # add the view name for Javascript
+
+    # checked whether the class has internal content (like TextWidget)
+    klass.has_content = hasattr(klass,"content")
+
+
+    # add the view name for Javascript as a traitlet
     traitlets_dict = klass.attributes.copy()
     traitlets_dict.update({"_view_name" : class_name.replace("Widget","View")})
 
-    
+    # the content must also be traitlet
+    if klass.has_content:
+        traitlets_dict.update({"content" : klass.content})
+
+
+    # now define the trailets with the correct traitlet.Type
     for name,default in traitlets_dict.iteritems():
 
         try:
@@ -185,6 +204,7 @@ widget_properties = { class_name : {"tag_name" : klass.tag_name,
                                     "fertile" : klass.fertile,
                                     "view_name" : class_name.replace("Widget","View"),
                                     "attributes" : klass.attributes.keys(),
+                                    "has_content" : klass.has_content,
                                     "draggable" : klass.draggable} for class_name,klass in class_dict.iteritems() }
 
 

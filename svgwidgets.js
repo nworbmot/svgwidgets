@@ -40,7 +40,7 @@ require(["widgets/js/widget"], function(WidgetManager){
 
         // choose the base class to inherit from, depending on whether
         // the class can have children
-        if(fertile === "yes"){
+        if(fertile){
             var BaseClass = IPython.WidgetManager._view_types.ContainerView;
         }
         else{
@@ -56,6 +56,8 @@ require(["widgets/js/widget"], function(WidgetManager){
             fertile: fertile,
 
 	    draggable: widget_properties[class_name]["draggable"],
+
+	    has_content: widget_properties[class_name]["has_content"],
             
 	    // note that this.attributes is reserved by Backbone.js
             svg_attributes: widget_properties[class_name]["attributes"],
@@ -72,12 +74,12 @@ require(["widgets/js/widget"], function(WidgetManager){
                 this.setElement(el);
 
 		// render any children with the ContainerView render method
-                if(this.fertile === "yes"){
+                if(this.fertile){
 		    this.constructor.__super__.render.apply(this);
 		}
 		
 		// make element draggable if required
-                if(this.draggable === "yes"){
+                if(this.draggable){
 		    this.selected = false;
 		    this.translateX = 0.0;
 		    this.translateY = 0.0;
@@ -97,6 +99,12 @@ require(["widgets/js/widget"], function(WidgetManager){
                     this.el.setAttribute(name,value);
                 }    
             
+		// update the content if required
+		if(this.has_content){
+		    this.el.innerHTML = this.model.get("content");
+		}
+
+
                 this.constructor.__super__.update.apply(this);
             },
 
