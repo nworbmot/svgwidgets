@@ -138,84 +138,71 @@ var make_svg_clickable = function(svg_view){
     svg_view.selected = undefined;
 
 
-    // NB: mouseout doesn't work on SVG in Chrome
-
-    var event_types = ["mousedown","mousemove","mouseup"];
-
-
-    for(var i = 0, length = event_types.length; i < length; i++){
-
-	// anonymous function wrapper to avoid unintentional closure
-
-	(function(j){
-
-	    var event_type = event_types[j];
-
-	    // attach functions to events
-
-	    svg_view.$el.on(event_type,function(event){
-		console.log(event_type);
-		switch(svg_view.mode){
-		case "select":
-		    select_listeners[event_type](event);
-		    break;
-		}	    
-	    });
-	})(i);
-
-    }
+    svg_view.el.onmousedown = function(event){
+	switch(svg_view.mode){
+	case "select":
+	    select_listener(event);
+	    break;
+	}
+    };
 
 
-    var select_listeners = {
 
-	mousedown: function(event){
+    // if mousedown in select mode, drag any draggable elements
 
-	    // recursively see which if any child views have been selected
+    var select_listener = function(event){
 
-	    var search_children = function(view){
-		if(event.target === view.el){
-		    return view;
-		}
-		else{
-		    for(var child_id in view.child_views){
-			var child_view = view.child_views[child_id];
-			var result = search_children(child_view);
-			if(result !== undefined){
-			    return result;
-			}
-		    }
-		    return undefined;
-		}
+	// recursively see which if any child views have been selected
+
+	var search_children = function(view){
+	    if(event.target === view.el){
+		return view;
 	    }
-
-	    svg_view.selected = search_children(svg_view);
-
-	    if(svg_view.selected !== undefined && svg_view.selected.draggable){
-		svg_view.previousX = event.pageX;
-		svg_view.previousY = event.pageY;
-
-		//if the object has been translated, get its current translation coords
-		if(svg_view.selected.el.hasAttribute("transform")){
-		    var transform_string = svg_view.selected.el.getAttribute("transform");
-		    var coords = parse_translate(transform_string);
-		    if(coords){
-			svg_view.translateX = coords[0];
-			svg_view.translateY = coords[1];
-		    }			
-		    else{
-			svg_view.translateX = 0.0;
-			svg_view.translateY = 0.0;
+	    else{
+		for(var child_id in view.child_views){
+		    var child_view = view.child_views[child_id];
+		    var result = search_children(child_view);
+		    if(result !== undefined){
+			return result;
 		    }
 		}
-		else{
-		    svg_view.translateX = 0.0;
-		    svg_view.translateY = 0.0;
+		return undefined;
+	    }
+	}
+
+	svg_view.selected = search_children(svg_view);
+
+	// if the selected item is draggable, let it be dragged
+
+	if(svg_view.selected !== undefined && svg_view.selected.draggable){
+	    svg_view.previousX = event.pageX;
+	    svg_view.previousY = event.pageY;
+
+	    //if the object has been translated, get its current translation coords
+
+	    var coords = false;
+
+	    if(svg_view.selected.el.hasAttribute("transform")){
+		var transform_string = svg_view.selected.el.getAttribute("transform");
+		var coords = parse_translate(transform_string);
+		if(coords){
+		    svg_view.translateX = coords[0];
+		    svg_view.translateY = coords[1];
 		}
 	    }
-	},
+	    
+	    if(!coords){
+		svg_view.translateX = 0.0;
+		svg_view.translateY = 0.0;
+	    }
 
-	mousemove: function(event){
-	    if(svg_view.selected !== undefined && svg_view.selected.draggable){
+
+
+	    // now define the behaviour on mousemove and mouseup
+	    // NB: mouseout doesn't work on SVG in Chrome
+
+	    svg_view.el.onmousemove = function(event){
+
 		svg_view.translateX += event.pageX - svg_view.previousX;
 		svg_view.translateY += event.pageY - svg_view.previousY;
 		svg_view.previousX = event.pageX;
@@ -224,15 +211,19 @@ var make_svg_clickable = function(svg_view){
 		var transform = "translate(" + svg_view.translateX + "," + svg_view.translateY + ")";
 		svg_view.selected.el.setAttribute("transform",transform);
 	    }
-	},
 
-	mouseup: function(event){
-	    if(svg_view.selected !== undefined && svg_view.selected.draggable){
+	    svg_view.el.onmouseup = function(event){
+
+		// send the final result to the model
 		var transform = svg_view.selected.el.getAttribute("transform");
 		svg_view.selected.model.set("transform",transform);
 		svg_view.selected.touch();
+
+		// turn listeners off again
+		svg_view.selected = undefined;
+		svg_view.el.onmousemove = null;
+		svg_view.el.onmouseup = null;
 	    }
-	    svg_view.selected = undefined;
 	}
     }
 }
@@ -242,7 +233,8 @@ var make_svg_clickable = function(svg_view){
 
 
 // parse a string to look for translate coordinates,
-// e.g. "translate(2.3,4.5)" will return [2.3,4.5]
+// e.g. "translate(2.3,4.5)" will return [2.3,4.5]; if the string is
+// nonsense, returns false
 
 var parse_translate = function(a_string){
 
