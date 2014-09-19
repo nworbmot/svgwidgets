@@ -139,8 +139,17 @@ require(["widgets/js/widget"], function(WidgetManager){
 			}
 		    });
 
-	    }            
+	    },
 
+	    
+            on_msg: function (content) {
+		// deal with requests from the Python backend
+
+		if (content["message_type"] === "get_html") {
+		    var message = {"message_type": "html","html": this.el.outerHTML};
+                    this.send(message);
+		}
+            }
 
             
         });

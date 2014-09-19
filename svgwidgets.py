@@ -125,9 +125,34 @@ class TextWidget(widgets.DOMWidget):
     content = "Hello World!"
 
 
+#
+# methods to append to all classes
+#
 
 
+# message the GUI to get element.outerHTML
+def get_html(self):
+
+    self.send({"message_type" : "get_html"})
+
+
+# deal with messages as they come in from the GUI
+def _handle_message(item,content):
+
+    if(content["message_type"] == "html"):
+        print(content["html"])
+
+
+# initialise element instance
+def _init(self, **kwargs):
+    super(self.__class__, self).__init__(**kwargs)
+    self.on_msg(_handle_message)
+
+
+
+#
 # get all Widget classes
+#
 
 class_names = filter(lambda name: name.endswith("Widget"), locals())
 
@@ -136,8 +161,9 @@ this_module = sys.modules[__name__]
 class_dict = { class_name : getattr(this_module,class_name) for class_name in class_names}
 
 
-
+#
 # make all attributes and _view_name into traitlets
+#
 
 for class_name, klass in class_dict.iteritems():
 
@@ -195,6 +221,12 @@ for class_name, klass in class_dict.iteritems():
         traitlet.name = name
         traitlet.this_class = klass
 
+
+    #finally set the universal methods
+
+    klass.get_html = get_html
+
+    klass.__init__ = _init
 
 
 
