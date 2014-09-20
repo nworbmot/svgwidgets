@@ -56,8 +56,6 @@ require(["widgets/js/widget"], function(WidgetManager){
             fertile: fertile,
 
 	    draggable: widget_properties[class_name]["draggable"],
-
-	    has_content: widget_properties[class_name]["has_content"],
             
 	    // note that this.attributes is reserved by Backbone.js
             svg_attributes: Object.keys(widget_properties[class_name]["attributes"]),
@@ -94,11 +92,11 @@ require(["widgets/js/widget"], function(WidgetManager){
                 for(var i=0, length = this.svg_attributes.length; i<length; i++){
 		    var name = this.svg_attributes[i];
                     var value = this.model.get(name);
-                    this.el.setAttribute(name,value);
+                    this.el.setAttribute(name.replace("_","-"),value);
                 }    
             
-		// update the content if required
-		if(this.has_content){
+		// update the content for TextWidget
+		if(this.tag_name === "text"){
 		    this.el.innerHTML = this.model.get("content");
 		}
 
@@ -151,6 +149,7 @@ var set_svg_mode = function(svg_view,mode){
 	var properties = widget_properties[class_name];
 	var tag_name = properties["tag_name"];
 	var attributes = properties["attributes"];
+	var gui_controls = ["fill","fill_opacity","stroke","stroke_width"];
     }
 
 
@@ -242,9 +241,43 @@ var set_svg_mode = function(svg_view,mode){
 	}
     }
 
+    // some universal functions for the drawing of elements
+
+    var set_style_attributes = function(child){
+
+	for(var i=0, length=gui_controls.length; i<length; i++){
+	    var attribute = gui_controls[i];
+	    if(attribute in attributes){
+		child.setAttribute(attribute.replace("_","-"),svg_view.model.get(attribute));
+	    }
+	}
+
+	child.setAttribute("transform","");
+    }
 
 
-    // now for each element type, define a the mouse behaviour
+    var onmouseup = function(child){
+
+	svg_view.el.removeChild(child);
+
+	var child_attributes = {};
+
+	for(var attribute in attributes){
+	    child_attributes[attribute] = child.getAttribute(attribute.replace("_","-"));
+	}
+
+	var message = {"message_type": "new", "class_name": class_name, "attributes": child_attributes};
+
+        svg_view.send(message);
+
+	// turn listeners off again
+	svg_view.el.onmousemove = null;
+	svg_view.el.onmouseup = null;
+    }
+
+
+    // now for each element type, define the mouse behaviour on the
+    // geometry
 
     listeners.rect = function(event){
 
@@ -258,11 +291,7 @@ var set_svg_mode = function(svg_view,mode){
 
         var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
 
-	// set the default attributes
-
-	for(var attribute in attributes){
-	    child.setAttribute(attribute,attributes[attribute]);
-	}
+	set_style_attributes(child);
 
 	child.setAttribute("x",x);
 	child.setAttribute("y",y);
@@ -307,16 +336,7 @@ var set_svg_mode = function(svg_view,mode){
 	}
 
 	svg_view.el.onmouseup = function(event){
-
-	    svg_view.el.removeChild(child);
-
-	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"x": x, "y": y,"width":width,"height": height}};
-
-            svg_view.send(message);
-
-	    // turn listeners off again
-	    svg_view.el.onmousemove = null;
-	    svg_view.el.onmouseup = null;
+	    onmouseup(child);
 	}
     }
 
@@ -334,9 +354,7 @@ var set_svg_mode = function(svg_view,mode){
 
         var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
 
-	for(var attribute in attributes){
-	    child.setAttribute(attribute,attributes[attribute]);
-	}
+	set_style_attributes(child);
 
 	child.setAttribute("cx",cx);
 	child.setAttribute("cy",cy);
@@ -357,15 +375,7 @@ var set_svg_mode = function(svg_view,mode){
 	}
 
 	svg_view.el.onmouseup = function(event){
-
-	    svg_view.el.removeChild(child);
-
-	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"cx": cx, "cy": cy,"r": r}};
-            svg_view.send(message);
-
-	    // turn listeners off again
-	    svg_view.el.onmousemove = null;
-	    svg_view.el.onmouseup = null;
+	    onmouseup(child);
 	}
     }
 
@@ -382,9 +392,7 @@ var set_svg_mode = function(svg_view,mode){
 
         var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
 
-	for(var attribute in attributes){
-	    child.setAttribute(attribute,attributes[attribute]);
-	}
+	set_style_attributes(child);
 
 	child.setAttribute("cx",cx);
 	child.setAttribute("cy",cy);
@@ -409,15 +417,7 @@ var set_svg_mode = function(svg_view,mode){
 	}
 
 	svg_view.el.onmouseup = function(event){
-
-	    svg_view.el.removeChild(child);
-
-	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"cx": cx, "cy": cy,"rx": rx,"ry": ry}};
-            svg_view.send(message);
-
-	    // turn listeners off again
-	    svg_view.el.onmousemove = null;
-	    svg_view.el.onmouseup = null;
+	    onmouseup(child);
 	}
     }
 
@@ -434,9 +434,7 @@ var set_svg_mode = function(svg_view,mode){
 
         var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
 
-	for(var attribute in attributes){
-	    child.setAttribute(attribute,attributes[attribute]);
-	}
+	set_style_attributes(child);
 
 	child.setAttribute("x1",x1);
 	child.setAttribute("y1",y1);
@@ -460,15 +458,7 @@ var set_svg_mode = function(svg_view,mode){
 	}
 
 	svg_view.el.onmouseup = function(event){
-
-	    svg_view.el.removeChild(child);
-
-	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"x1": x1, "y1": y1,"x2": x2,"y2": y2}};
-            svg_view.send(message);
-
-	    // turn listeners off again
-	    svg_view.el.onmousemove = null;
-	    svg_view.el.onmouseup = null;
+	    onmouseup(child);
 	}
     }
 
@@ -484,9 +474,7 @@ var set_svg_mode = function(svg_view,mode){
 
         var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
 
-	for(var attribute in attributes){
-	    child.setAttribute(attribute,attributes[attribute]);
-	}
+	set_style_attributes(child);
 
 	child.setAttribute("d",d);
 
@@ -505,19 +493,9 @@ var set_svg_mode = function(svg_view,mode){
 	}
 
 	svg_view.el.onmouseup = function(event){
-
-	    svg_view.el.removeChild(child);
-
-	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"d": d}};
-            svg_view.send(message);
-
-	    // turn listeners off again
-	    svg_view.el.onmousemove = null;
-	    svg_view.el.onmouseup = null;
+	    onmouseup(child);
 	}
     }
-
-
 
 
 

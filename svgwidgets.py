@@ -35,7 +35,7 @@ from __future__ import print_function, division
 
 
 
-__version__ = "0.3"
+__version__ = "0.4"
 __author__ = "Tom Brown"
 __copyright__ = "Copyright 2014 Tom Brown, GNU GPL 3"
 
@@ -93,7 +93,13 @@ class FertileSVGWidget(widgets.ContainerWidget,GeneralSVGWidget):
             child = klass()
 
             for attribute in content["attributes"]:
-                setattr(child,attribute,content["attributes"][attribute])
+                value = content["attributes"][attribute]
+
+                #cast any string floats to floats
+                if type(getattr(child,attribute)) == float:
+                    value = float(value)
+
+                setattr(child,attribute,value)
 
             self.children = self.children + (child,)
 
@@ -119,10 +125,10 @@ class InfertileSVGWidget(widgets.DOMWidget,GeneralSVGWidget):
 
 class SVGWidget(FertileSVGWidget):
     tag_name = "svg"
-    attributes = {"width" : 400, "height" : 300}
+    attributes = {"width" : 600, "height" : 400}
 
-    # the SVG element has a mode for the drawing GUI
-    mode = "select"
+    # the SVG element has various traitlets for the drawing GUI
+    gui_controls = {"mode": "select", "fill": "blue", "fill_opacity": 0.5, "stroke": "red", "stroke_width": 3}
 
 
 class GroupWidget(FertileSVGWidget):
@@ -132,27 +138,27 @@ class GroupWidget(FertileSVGWidget):
 
 class RectWidget(InfertileSVGWidget):
     tag_name = "rect"
-    attributes = {"x" : 10,"y" : 10, "width" : 100,"height" : 50, "fill" : "blue", "fill-opacity" : 0.5, "stroke" : "red", "stroke-width" : 3, "transform" : ""}
+    attributes = {"x" : 10,"y" : 10, "width" : 100,"height" : 50, "fill" : "blue", "fill_opacity" : 0.5, "stroke" : "red", "stroke_width" : 3, "transform" : ""}
 
 
 class CircleWidget(InfertileSVGWidget):
     tag_name = "circle"
-    attributes = {"cx" : 50,"cy" : 110, "r" : 20, "fill" : "red", "fill-opacity" : 0.5, "stroke" : "green", "stroke-width" : 3, "transform": ""}
+    attributes = {"cx" : 50,"cy" : 110, "r" : 20, "fill" : "red", "fill_opacity" : 0.5, "stroke" : "green", "stroke_width" : 3, "transform": ""}
 
 
 class EllipseWidget(InfertileSVGWidget):
     tag_name = "ellipse"
-    attributes = {"cx" : 250,"cy" : 110, "rx" : 20, "ry" : 10, "fill" : "magenta", "fill-opacity" : 0.5, "stroke" : "cyan", "stroke-width" : 3, "transform": ""}
+    attributes = {"cx" : 250,"cy" : 110, "rx" : 20, "ry" : 10, "fill" : "magenta", "fill_opacity" : 0.5, "stroke" : "cyan", "stroke_width" : 3, "transform": ""}
 
 
 class LineWidget(InfertileSVGWidget):
     tag_name = "line"
-    attributes = {"x1" : 10,"y1" : 200,"x2" : 100,"y2" : 150,  "stroke" : "orange", "stroke-width" : 3, "transform": ""}
+    attributes = {"x1" : 10,"y1" : 200,"x2" : 100,"y2" : 150,  "stroke" : "orange", "stroke_width" : 3, "transform": ""}
 
 
 class PathWidget(InfertileSVGWidget):
     tag_name = "path"
-    attributes = {"d" : "M 10,250 C70,150 200,150 200,250", "stroke" : "black", "stroke-width" : 3, "fill" : "cyan", "fill-opacity" : 0.5, "transform": ""}
+    attributes = {"d" : "M 10,250 C70,150 200,150 200,250", "stroke" : "black", "stroke_width" : 3, "fill" : "cyan", "fill_opacity" : 0.5, "transform": ""}
 
 
 class TextWidget(InfertileSVGWidget):
@@ -163,23 +169,53 @@ class TextWidget(InfertileSVGWidget):
 
 
 
+
 class SVGBuilderWidget(widgets.ContainerWidget):
-    """SVGBuilderWIdget is a wrapper for an SVG drawing GUI."""
-    
+    """SVGBuilderWidget is a wrapper for an SVG drawing GUI."""
+
     def __init__(self, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
 
-        # allow toggling of SVG draw mode
-        self.toggle_values = ["select","rect","circle","ellipse","line","path"]
-        self.toggle = widgets.ToggleButtonsWidget(values = self.toggle_values,description="Drawing tools:")
+        colours = ["black","red","orange","yellow","green","blue","magenta","cyan"]
+        
+        # allow toggling of SVG draw mode                                                                             
+        draw_toggle_values = ["select","rect","circle","ellipse","line","path"]
+        self.draw_toggle = widgets.ToggleButtonsWidget(values = draw_toggle_values,description="Choose drawing tool:")
 
+        # set up the stroke controls
+        self.stroke_picker = widgets.DropdownWidget(values = colours,description="Stroke colour:")
+        self.stroke_width_slider = widgets.FloatSliderWidget(min=0,max=20,value=3,description="Stroke width:")
+        
+        self.stroke_container = widgets.ContainerWidget()
+        self.stroke_container.remove_class("vbox")
+        self.stroke_container.add_class("hbox")
+        self.stroke_container.children = [self.stroke_picker,self.stroke_width_slider]
+        
+        # set up the fill controls
+        self.fill_picker = widgets.DropdownWidget(values = ["none"] + colours,description="Fill colour:")
+        self.fill_opacity_slider = widgets.FloatSliderWidget(min=0,max=1,value=0.5,description="Fill opacity:")
+        
+        self.fill_container = widgets.ContainerWidget()
+        self.fill_container.remove_class("vbox")
+        self.fill_container.add_class("hbox")
+        self.fill_container.children = [self.fill_picker,self.fill_opacity_slider]
+        
+        # the main SVG
         self.svg = SVGWidget()
         
-        # link the toggle value to the SVG mode
-        self.mode_link = traitlets.link((self.toggle, 'value'), (self.svg, 'mode'))
-        
-        self.children = [self.toggle,self.svg]
+        # border the SVG
+        self.svg.set_css('border', '1px solid black') 
 
+
+        # link the control widgets to the SVG control variables                                                                       
+        self.mode_link = traitlets.link((self.draw_toggle, 'value'), (self.svg, 'mode'))
+        self.stroke_link = traitlets.link((self.stroke_picker, 'value'), (self.svg, 'stroke'))
+        self.stroke_width_link = traitlets.link((self.stroke_width_slider, 'value'), (self.svg, 'stroke_width'))
+        self.fill_link = traitlets.link((self.fill_picker, 'value'), (self.svg, 'fill'))
+        self.fill_opacity_link = traitlets.link((self.fill_opacity_slider, 'value'), (self.svg, 'fill_opacity'))
+        
+        # define the main container's children
+        self.children = [self.draw_toggle,self.stroke_container,self.fill_container,self.svg]
 
 
 
@@ -210,21 +246,24 @@ for class_name in filter(lambda name: name.endswith("Widget"), locals()):
     svg_class_dict[class_name] = klass
 
 
-    # checked whether the class has internal content (like TextWidget)
-    klass.has_content = hasattr(klass,"content")
+    # store the class attributes to be promoted to traitlets along
+    # with their default values
+    traitlets_dict = klass.attributes.copy()
 
 
     # add the view name for Javascript as a traitlet
-    traitlets_dict = klass.attributes.copy()
     traitlets_dict.update({"_view_name" : class_name.replace("Widget","View")})
 
-    # the content must also be traitlet
-    if klass.has_content:
+
+
+    # the GUI controls for the SVGWidget must also be trailets
+    if class_name == "SVGWidget":
+        traitlets_dict.update(klass.gui_controls)
+
+    # the content for the TextWidget must also be a traitlet
+    elif class_name == "TextWidget":
         traitlets_dict.update({"content" : klass.content})
 
-    # the mode for the SVGWidget must also be a trailet
-    if class_name == "SVGWidget":
-        traitlets_dict.update({"mode" : klass.mode})
 
 
     # now define the trailets with the correct traitlet.Type
@@ -266,7 +305,6 @@ widget_properties = { class_name : {"tag_name" : klass.tag_name,
                                     "fertile" : klass.fertile,
                                     "view_name" : class_name.replace("Widget","View"),
                                     "attributes" : klass.attributes,
-                                    "has_content" : klass.has_content,
                                     "draggable" : klass.draggable} for class_name,klass in svg_class_dict.iteritems() }
 
 
