@@ -60,7 +60,7 @@ require(["widgets/js/widget"], function(WidgetManager){
 	    has_content: widget_properties[class_name]["has_content"],
             
 	    // note that this.attributes is reserved by Backbone.js
-            svg_attributes: widget_properties[class_name]["attributes"],
+            svg_attributes: Object.keys(widget_properties[class_name]["attributes"]),
         
             tag_name: widget_properties[class_name]["tag_name"],
 
@@ -78,13 +78,13 @@ require(["widgets/js/widget"], function(WidgetManager){
 		    this.constructor.__super__.render.apply(this);
 		}
 
+		// set the initial mode for the SVG
+		if(this.tag_name === "svg"){
+		    this.mode = null;
+		}
+
 		// make sure all attributes, etc., are up-to-date
                 this.update();
-
-		// define event listeners for the SVG
-		if(this.tag_name === "svg"){
-		    make_svg_clickable(this);
-		}
             },
         
             update: function(){
@@ -100,6 +100,14 @@ require(["widgets/js/widget"], function(WidgetManager){
 		// update the content if required
 		if(this.has_content){
 		    this.el.innerHTML = this.model.get("content");
+		}
+
+		// update the SVG drawing mode
+		if(this.tag_name === "svg"){
+		    var mode = this.model.get("mode");
+		    if(mode !== this.mode){
+			set_svg_mode(this,mode);
+		    }
 		}
 
 
@@ -129,28 +137,34 @@ require(["widgets/js/widget"], function(WidgetManager){
 
 
 
-// attach all the event listeners to the SVG view object
+// attach all the event listeners to the SVG view object, depending on
+// the mode
 
-var make_svg_clickable = function(svg_view){
+var set_svg_mode = function(svg_view,mode){
 
-    svg_view.mode = "select";
+    svg_view.mode = mode;
 
-    svg_view.selected = undefined;
+    // define useful variables for the drawing modes
+
+    if(mode !== "select"){
+	var class_name = mode.charAt(0).toUpperCase() + mode.slice(1) + "Widget";
+	var properties = widget_properties[class_name];
+	var tag_name = properties["tag_name"];
+	var attributes = properties["attributes"];
+    }
 
 
-    svg_view.el.onmousedown = function(event){
-	switch(svg_view.mode){
-	case "select":
-	    select_listener(event);
-	    break;
-	}
-    };
+    // svg_view.el.onmousedown is set to listeners[mode] at the end
 
+    var listeners = {};
 
 
     // if mousedown in select mode, drag any draggable elements
 
-    var select_listener = function(event){
+    listeners.select = function(event){
+
+	// SVG View which has been selected
+	var selected;
 
 	// recursively see which if any child views have been selected
 
@@ -170,11 +184,12 @@ var make_svg_clickable = function(svg_view){
 	    }
 	}
 
-	svg_view.selected = search_children(svg_view);
+	selected = search_children(svg_view);
+
 
 	// if the selected item is draggable, let it be dragged
 
-	if(svg_view.selected !== undefined && svg_view.selected.draggable){
+	if(selected !== undefined && selected.draggable){
 	    svg_view.previousX = event.pageX;
 	    svg_view.previousY = event.pageY;
 
@@ -182,8 +197,8 @@ var make_svg_clickable = function(svg_view){
 
 	    var coords = false;
 
-	    if(svg_view.selected.el.hasAttribute("transform")){
-		var transform_string = svg_view.selected.el.getAttribute("transform");
+	    if(selected.el.hasAttribute("transform")){
+		var transform_string = selected.el.getAttribute("transform");
 		var coords = parse_translate(transform_string);
 		if(coords){
 		    svg_view.translateX = coords[0];
@@ -209,26 +224,320 @@ var make_svg_clickable = function(svg_view){
 		svg_view.previousY = event.pageY;
 
 		var transform = "translate(" + svg_view.translateX + "," + svg_view.translateY + ")";
-		svg_view.selected.el.setAttribute("transform",transform);
+		selected.el.setAttribute("transform",transform);
 	    }
 
 	    svg_view.el.onmouseup = function(event){
 
 		// send the final result to the model
-		var transform = svg_view.selected.el.getAttribute("transform");
-		svg_view.selected.model.set("transform",transform);
-		svg_view.selected.touch();
+		var transform = selected.el.getAttribute("transform");
+		selected.model.set("transform",transform);
+		selected.touch();
 
 		// turn listeners off again
-		svg_view.selected = undefined;
+		selected = undefined;
 		svg_view.el.onmousemove = null;
 		svg_view.el.onmouseup = null;
 	    }
 	}
     }
+
+
+
+    // now for each element type, define a the mouse behaviour
+
+    listeners.rect = function(event){
+
+	var coords = get_svg_coords(event,svg_view.el);
+	var startX = coords.x;
+	var startY = coords.y;
+	var x = startX;
+	var y = startY;
+	var width = 10;
+	var height = 10;
+
+        var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
+
+	// set the default attributes
+
+	for(var attribute in attributes){
+	    child.setAttribute(attribute,attributes[attribute]);
+	}
+
+	child.setAttribute("x",x);
+	child.setAttribute("y",y);
+
+	child.setAttribute("width",width);
+	child.setAttribute("height",height);
+
+	svg_view.el.appendChild(child);
+
+	// now define the behaviour on mousemove and mouseup
+	// NB: mouseout doesn't work on SVG in Chrome
+
+	svg_view.el.onmousemove = function(event){
+
+	    var coords = get_svg_coords(event,svg_view.el);
+
+	    if(coords.x < startX){
+		x = coords.x;
+		width = startX - coords.x;
+	    }
+	    else{
+		x = startX;
+		width = coords.x - startX;
+	    }
+
+	    if(coords.y < startY){
+		y = coords.y;
+		height = startY - coords.y;
+	    }
+	    else{
+		y = startY;
+		height = coords.y - startY;
+	    }
+
+
+
+	    child.setAttribute("x",x);
+	    child.setAttribute("y",y);
+	    child.setAttribute("width",width);
+	    child.setAttribute("height",height);
+
+	}
+
+	svg_view.el.onmouseup = function(event){
+
+	    svg_view.el.removeChild(child);
+
+	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"x": x, "y": y,"width":width,"height": height}};
+
+            svg_view.send(message);
+
+	    // turn listeners off again
+	    svg_view.el.onmousemove = null;
+	    svg_view.el.onmouseup = null;
+	}
+    }
+
+
+
+    // if mousedown in circle mode, draw a circle
+
+    listeners.circle = function(event){
+
+	var coords = get_svg_coords(event,svg_view.el);
+
+	var cx = coords.x;
+	var cy = coords.y;
+	var r = 5;
+
+        var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
+
+	for(var attribute in attributes){
+	    child.setAttribute(attribute,attributes[attribute]);
+	}
+
+	child.setAttribute("cx",cx);
+	child.setAttribute("cy",cy);
+	child.setAttribute("r",r);
+
+	svg_view.el.appendChild(child);
+
+	// now define the behaviour on mousemove and mouseup
+	// NB: mouseout doesn't work on SVG in Chrome
+
+	svg_view.el.onmousemove = function(event){
+
+	    var coords = get_svg_coords(event,svg_view.el);
+
+	    r = Math.abs(coords.x - cx);
+
+	    child.setAttribute("r",r);
+	}
+
+	svg_view.el.onmouseup = function(event){
+
+	    svg_view.el.removeChild(child);
+
+	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"cx": cx, "cy": cy,"r": r}};
+            svg_view.send(message);
+
+	    // turn listeners off again
+	    svg_view.el.onmousemove = null;
+	    svg_view.el.onmouseup = null;
+	}
+    }
+
+
+
+    listeners.ellipse = function(event){
+
+	var coords = get_svg_coords(event,svg_view.el);
+
+	var cx = coords.x;
+	var cy = coords.y;
+	var rx = 5;
+	var ry = 5;
+
+        var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
+
+	for(var attribute in attributes){
+	    child.setAttribute(attribute,attributes[attribute]);
+	}
+
+	child.setAttribute("cx",cx);
+	child.setAttribute("cy",cy);
+	child.setAttribute("rx",rx);
+	child.setAttribute("ry",ry);
+
+	svg_view.el.appendChild(child);
+
+	// now define the behaviour on mousemove and mouseup
+	// NB: mouseout doesn't work on SVG in Chrome
+
+	svg_view.el.onmousemove = function(event){
+
+	    var coords = get_svg_coords(event,svg_view.el);
+
+
+	    rx = Math.abs(coords.x - cx);
+	    ry = Math.abs(coords.y - cy);
+
+	    child.setAttribute("rx",rx);
+	    child.setAttribute("ry",ry);
+	}
+
+	svg_view.el.onmouseup = function(event){
+
+	    svg_view.el.removeChild(child);
+
+	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"cx": cx, "cy": cy,"rx": rx,"ry": ry}};
+            svg_view.send(message);
+
+	    // turn listeners off again
+	    svg_view.el.onmousemove = null;
+	    svg_view.el.onmouseup = null;
+	}
+    }
+
+
+
+    listeners.line = function(event){
+
+	var coords = get_svg_coords(event,svg_view.el);
+
+	var x1 = coords.x;
+	var y1 = coords.y;
+	var x2 = x1 + 5;
+	var y2 = y1;
+
+        var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
+
+	for(var attribute in attributes){
+	    child.setAttribute(attribute,attributes[attribute]);
+	}
+
+	child.setAttribute("x1",x1);
+	child.setAttribute("y1",y1);
+	child.setAttribute("x2",x2);
+	child.setAttribute("y2",y2);
+
+	svg_view.el.appendChild(child);
+
+	// now define the behaviour on mousemove and mouseup
+	// NB: mouseout doesn't work on SVG in Chrome
+
+	svg_view.el.onmousemove = function(event){
+
+	    var coords = get_svg_coords(event,svg_view.el);
+
+	    x2 = coords.x;
+	    y2 = coords.y;
+
+	    child.setAttribute("x2",x2);
+	    child.setAttribute("y2",y2);
+	}
+
+	svg_view.el.onmouseup = function(event){
+
+	    svg_view.el.removeChild(child);
+
+	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"x1": x1, "y1": y1,"x2": x2,"y2": y2}};
+            svg_view.send(message);
+
+	    // turn listeners off again
+	    svg_view.el.onmousemove = null;
+	    svg_view.el.onmouseup = null;
+	}
+    }
+
+
+
+
+
+    listeners.path = function(event){
+
+	var coords = get_svg_coords(event,svg_view.el);
+
+	var d =  "M" + String(coords.x) + "," + String(coords.y);
+
+        var child = document.createElementNS("http://www.w3.org/2000/svg",tag_name);
+
+	for(var attribute in attributes){
+	    child.setAttribute(attribute,attributes[attribute]);
+	}
+
+	child.setAttribute("d",d);
+
+	svg_view.el.appendChild(child);
+
+	// now define the behaviour on mousemove and mouseup
+	// NB: mouseout doesn't work on SVG in Chrome
+
+	svg_view.el.onmousemove = function(event){
+
+	    var coords = get_svg_coords(event,svg_view.el);
+
+	    d += " " + String(coords.x) + "," + String(coords.y);
+
+	    child.setAttribute("d",d);
+	}
+
+	svg_view.el.onmouseup = function(event){
+
+	    svg_view.el.removeChild(child);
+
+	    var message = {"message_type": "new", "class_name": class_name, "attributes": {"d": d}};
+            svg_view.send(message);
+
+	    // turn listeners off again
+	    svg_view.el.onmousemove = null;
+	    svg_view.el.onmouseup = null;
+	}
+    }
+
+
+
+
+
+    svg_view.el.onmousedown = listeners[mode];
+
 }
 
 
+
+
+// get the coordinates of the event in the SVG's frame of reference
+
+var get_svg_coords = function(event,svg){
+
+    // a hopefully browser-independent way of getting the SVG offsets
+    var bounding = svg.getBoundingClientRect();
+
+    return {x: event.clientX - bounding.left,
+	    y: event.clientY - bounding.top};
+}
 
 
 
