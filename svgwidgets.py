@@ -20,15 +20,12 @@ A library to manipulate Scalar Vector Graphics in the iPython notebook
 using Widgets, which synchronise between the Python backend and the
 Javascript frontend.
 
-Usage from the iPython notebook:
+Usage from the iPython notebook to start an SVG drawing GUI:
 
 import svgwidgets
 
-svg = svgwidgets.SVGWidget()
-rect = svgwidgets.RectWidget()
-svg.children = [rect]
-svg
-
+builder = svgwidgets.SVGBuilderWidget()
+builder
 
 """
 
@@ -56,85 +53,118 @@ from IPython.utils import traitlets
 import json, sys
 
 
-# the class definitions all follow the general outline for SVG tagName:
 
-# class TagNameWidget:
-#     tag_name = "tagName"
-#     attributes = {"x" : 40}
-#     draggable = False
+class GeneralSVGWidget(object):
+    """GeneralSVGWidget defines the most basic SVG element properties,
+    including the XML tag name and a list of attributes with default
+    values. Later in this module, the attributes and _view_name are
+    promoted to traitlets, to avoid lots of boilerplate.
 
-# the SVG attributes are listed with their default values
+    """
 
-# the attributes and _view_name are then promoted later to traitlets
-# to avoid lots of boilerplate
+    tag_name = ""
+    attributes = {}
 
-
-# the classes inherit from widgets.ContainerWidget if they can have
-# children (like svg and g; later indicated by klass.fertile = True)
-# or inherit from widgets.DOMWidget if the cannot have children (like
-# rect and path;  later indicated by klass.fertile = False)
+    # message the GUI to get element.outerHTML
+    def get_html(self):
+        self.send({"message_type" : "get_html"})
 
 
 
-class SVGWidget(widgets.ContainerWidget):
+class FertileSVGWidget(widgets.ContainerWidget,GeneralSVGWidget):
+    """FertileSVGWidgets can have child elements (like the svg and g
+    elements) and therefore inherit from widgets.ContainerWidget.
+
+    """
+
+    def __init__(self, **kwargs):
+        widgets.ContainerWidget.__init__(self,**kwargs)
+        self.on_msg(self._handle_message)
+
+    # deal with messages as they come in from the GUI
+    def _handle_message(self,item,content):
+        if content["message_type"] == "html":
+            print(content["html"])
+
+        elif content["message_type"] == "new":
+            class_name = content["class_name"]
+            klass = svg_class_dict[class_name]
+            
+            child = klass()
+
+            for attribute in content["attributes"]:
+                setattr(child,attribute,content["attributes"][attribute])
+
+            self.children = self.children + (child,)
+
+
+
+class InfertileSVGWidget(widgets.DOMWidget,GeneralSVGWidget):
+    """InfertileSVGWidgets cannot have child elements (like the rect and
+    circle elements) and therefore inherit from widgets.DOMWidget.
+
+    """
+
+    def __init__(self, **kwargs):
+        widgets.DOMWidget.__init__(self,**kwargs)
+        self.on_msg(self._handle_message)
+
+    # deal with messages as they come in from the GUI
+    def _handle_message(self,item,content):
+        if content["message_type"] == "html":
+            print(content["html"])
+
+
+# now come the basic SVG elements
+
+class SVGWidget(FertileSVGWidget):
     tag_name = "svg"
     attributes = {"width" : 400, "height" : 300}
-    draggable = False
+
+    # the SVG element has a mode for the drawing GUI
     mode = "select"
 
 
-class GroupWidget(widgets.ContainerWidget):
+class GroupWidget(FertileSVGWidget):
     tag_name = "g"
     attributes = {"transform": ""}
-    draggable = False
 
 
-class RectWidget(widgets.DOMWidget):
+class RectWidget(InfertileSVGWidget):
     tag_name = "rect"
     attributes = {"x" : 10,"y" : 10, "width" : 100,"height" : 50, "fill" : "blue", "fill-opacity" : 0.5, "stroke" : "red", "stroke-width" : 3, "transform" : ""}
-    draggable = True
 
 
-class CircleWidget(widgets.DOMWidget):
+class CircleWidget(InfertileSVGWidget):
     tag_name = "circle"
     attributes = {"cx" : 50,"cy" : 110, "r" : 20, "fill" : "red", "fill-opacity" : 0.5, "stroke" : "green", "stroke-width" : 3, "transform": ""}
-    draggable = True
 
 
-class EllipseWidget(widgets.DOMWidget):
+class EllipseWidget(InfertileSVGWidget):
     tag_name = "ellipse"
     attributes = {"cx" : 250,"cy" : 110, "rx" : 20, "ry" : 10, "fill" : "magenta", "fill-opacity" : 0.5, "stroke" : "cyan", "stroke-width" : 3, "transform": ""}
-    draggable = True
 
 
-class LineWidget(widgets.DOMWidget):
+class LineWidget(InfertileSVGWidget):
     tag_name = "line"
     attributes = {"x1" : 10,"y1" : 200,"x2" : 100,"y2" : 150,  "stroke" : "orange", "stroke-width" : 3, "transform": ""}
-    draggable = True
 
 
-class PathWidget(widgets.DOMWidget):
+class PathWidget(InfertileSVGWidget):
     tag_name = "path"
     attributes = {"d" : "M 10,250 C70,150 200,150 200,250", "stroke" : "black", "stroke-width" : 3, "fill" : "cyan", "fill-opacity" : 0.5, "transform": ""}
-    draggable = True
 
 
-class TextWidget(widgets.DOMWidget):
+class TextWidget(InfertileSVGWidget):
     tag_name = "text"
     attributes = {"x" : 100, "y" : 100,  "fill" : "black"}
-    draggable = True
     content = "Hello World!"
 
 
 
 
-
-
-# wrapper for SVG builder canvas
-
 class SVGBuilderWidget(widgets.ContainerWidget):
-    
-    # initialise element instance                                                                                    
+    """SVGBuilderWIdget is a wrapper for an SVG drawing GUI."""
     
     def __init__(self, **kwargs):
         super(self.__class__, self).__init__(**kwargs)
@@ -155,67 +185,29 @@ class SVGBuilderWidget(widgets.ContainerWidget):
 
 
 #
-# methods to append to all classes non-builder classes
+# get all SVG element Widget classes, store them in svg_class_dict,
+# and make all attributes and _view_name into traitlets
 #
 
+svg_class_dict = {}
 
-# message the GUI to get element.outerHTML
-def get_html(self):
+for class_name in filter(lambda name: name.endswith("Widget"), locals()):
 
-    self.send({"message_type" : "get_html"})
-
-
-# deal with messages as they come in from the GUI
-def _handle_message(self,item,content):
-
-    if content["message_type"] == "html":
-        print(content["html"])
-
-    elif content["message_type"] == "new" and self.fertile:
-        class_name = content["class_name"]
-        klass = class_dict[class_name]
-
-        child = klass()
-
-        for attribute in content["attributes"]:
-            setattr(child,attribute,content["attributes"][attribute])
-
-        self.children = self.children + (child,)
-
-
-
-# initialise element instance
-def _init(self, **kwargs):
-    super(self.__class__, self).__init__(**kwargs)
-    self.on_msg(self._handle_message)
-
-
-
-#
-# get all non-builder Widget classes
-#
-
-class_names = filter(lambda name: name.endswith("Widget") and "Builder" not in name, locals())
-
-this_module = sys.modules[__name__]
-
-class_dict = { class_name : getattr(this_module,class_name) for class_name in class_names}
-
-
-#
-# make all attributes and _view_name into traitlets
-#
-
-for class_name, klass in class_dict.iteritems():
-
+    this_module = sys.modules[__name__]
+    klass = getattr(this_module,class_name)
     
     # classify whether the class can have children based on parent class
     base_class = klass.__bases__[0]
-    if base_class.__name__ == "DOMWidget":
+    if base_class.__name__ == "InfertileSVGWidget":
         klass.fertile = False
-    elif base_class.__name__ == "ContainerWidget":
+        klass.draggable = True
+    elif base_class.__name__ == "FertileSVGWidget":
         klass.fertile = True
+        klass.draggable = False
+    else:
+        continue
 
+    svg_class_dict[class_name] = klass
 
 
     # checked whether the class has internal content (like TextWidget)
@@ -267,15 +259,6 @@ for class_name, klass in class_dict.iteritems():
         traitlet.this_class = klass
 
 
-    #finally set the universal methods
-
-    klass.get_html = get_html
-
-    klass._handle_message = _handle_message
-
-    klass.__init__ = _init
-
-
 
 # prepare data to send to Javascript
 
@@ -284,7 +267,7 @@ widget_properties = { class_name : {"tag_name" : klass.tag_name,
                                     "view_name" : class_name.replace("Widget","View"),
                                     "attributes" : klass.attributes,
                                     "has_content" : klass.has_content,
-                                    "draggable" : klass.draggable} for class_name,klass in class_dict.iteritems() }
+                                    "draggable" : klass.draggable} for class_name,klass in svg_class_dict.iteritems() }
 
 
 # set data in global scope

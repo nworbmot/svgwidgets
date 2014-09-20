@@ -17,14 +17,12 @@ features will be added soon.
 
 The notebook svgwidgets_notebook.ipynb provides a basic example of the
 code in operation. For the simplest example, execute the following in
-an iPython notebook cell:
+an iPython notebook cell to start an SVG drawing GUI:
 
-     import svgwidgets
+    import svgwidgets
 
-     svg = svgwidgets.SVGWidget()
-     rect = svgwidgets.RectWidget()
-     svg.children = [rect]
-     svg
+    builder = svgwidgets.SVGBuilderWidget()
+    builder
 
 
 
