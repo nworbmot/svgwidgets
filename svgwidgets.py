@@ -35,7 +35,7 @@ from __future__ import print_function, division
 
 
 
-__version__ = "0.4"
+__version__ = "0.4.1"
 __author__ = "Tom Brown"
 __copyright__ = "Copyright 2014 Tom Brown, GNU GPL 3"
 
@@ -282,19 +282,10 @@ for class_name in filter(lambda name: name.endswith("Widget"), locals()):
  
         traitlet = getattr(klass,name)
 
-        
-        # I don't understand where traitlet.name and
-        # traitlet.this_class get set in the official code, but the
-        # following sets them:
-
-        # class Rect(DOMWidget):
-        #     thingie = traitlets.Float(11.5, sync=True)
-
-        # while this doesn't:
-
-        # Rect.thingie = traitlets.Float(11.5, sync=True)
-                
+        # normally set by metaclass IPython.utils.traitlets.MetaHasTraits.__new__
         traitlet.name = name
+
+        # normally set by metaclass IPython.utils.traitlets.MetaHasTraits.__init__
         traitlet.this_class = klass
 
 

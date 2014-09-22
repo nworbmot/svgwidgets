@@ -25,7 +25,7 @@
 
 
 
-// code the define our new Backbone.js View objects
+// code to define our new Backbone.js View objects
 
 require(["widgets/js/widget"], function(WidgetManager){
 
@@ -281,6 +281,7 @@ var set_svg_mode = function(svg_view,mode){
 
     listeners.rect = function(event){
 
+	set_svg_ref_coords(svg_view.el);
 	var coords = get_svg_coords(event,svg_view.el);
 	var startX = coords.x;
 	var startY = coords.y;
@@ -308,25 +309,11 @@ var set_svg_mode = function(svg_view,mode){
 
 	    var coords = get_svg_coords(event,svg_view.el);
 
-	    if(coords.x < startX){
-		x = coords.x;
-		width = startX - coords.x;
-	    }
-	    else{
-		x = startX;
-		width = coords.x - startX;
-	    }
+	    x = Math.min(coords.x,startX);
+	    y = Math.min(coords.y,startY);
 
-	    if(coords.y < startY){
-		y = coords.y;
-		height = startY - coords.y;
-	    }
-	    else{
-		y = startY;
-		height = coords.y - startY;
-	    }
-
-
+	    width = Math.abs(coords.x - startX);
+	    height = Math.abs(coords.y - startY);
 
 	    child.setAttribute("x",x);
 	    child.setAttribute("y",y);
@@ -346,6 +333,7 @@ var set_svg_mode = function(svg_view,mode){
 
     listeners.circle = function(event){
 
+	set_svg_ref_coords(svg_view.el);
 	var coords = get_svg_coords(event,svg_view.el);
 
 	var cx = coords.x;
@@ -383,6 +371,7 @@ var set_svg_mode = function(svg_view,mode){
 
     listeners.ellipse = function(event){
 
+	set_svg_ref_coords(svg_view.el);
 	var coords = get_svg_coords(event,svg_view.el);
 
 	var cx = coords.x;
@@ -425,6 +414,7 @@ var set_svg_mode = function(svg_view,mode){
 
     listeners.line = function(event){
 
+	set_svg_ref_coords(svg_view.el);
 	var coords = get_svg_coords(event,svg_view.el);
 
 	var x1 = coords.x;
@@ -468,6 +458,7 @@ var set_svg_mode = function(svg_view,mode){
 
     listeners.path = function(event){
 
+	set_svg_ref_coords(svg_view.el);
 	var coords = get_svg_coords(event,svg_view.el);
 
 	var d =  "M" + String(coords.x) + "," + String(coords.y);
@@ -506,16 +497,25 @@ var set_svg_mode = function(svg_view,mode){
 
 
 
+// a hopefully browser-independent way of getting the SVG offsets
+// inspired by http://stackoverflow.com/questions/20957627/how-do-you-transform-event-coordinates-to-svg-coordinates-despite-bogus-getbound
+
+// called only on mousedown, to avoid excessive calling during
+// mousemove - this has side-effect that scrolling while drawing an
+// element will disrupt the positioning
+
+var set_svg_ref_coords = function(svg){
+    svg.reference = svg.getScreenCTM();
+}
+
+
 // get the coordinates of the event in the SVG's frame of reference
 
 var get_svg_coords = function(event,svg){
-
-    // a hopefully browser-independent way of getting the SVG offsets
-    var bounding = svg.getBoundingClientRect();
-
-    return {x: event.clientX - bounding.left,
-	    y: event.clientY - bounding.top};
+    return {x: event.clientX - svg.reference["e"],
+	    y: event.clientY - svg.reference["f"]}
 }
+
 
 
 
