@@ -169,6 +169,23 @@ class TextWidget(InfertileSVGWidget):
 
 
 
+# following class definition borrowed from cirq https://github.com/ntezak/cirq
+
+class HorizontalContainerWidget(widgets.ContainerWidget):
+    """
+    Equivalent to a `ContainerWidget` but with a css-class `hbox` instead of `vbox` for horizontal layout.
+    """
+
+    def __init__(self, **kwargs):
+        super(self.__class__, self).__init__(**kwargs)
+        self.on_displayed(self._make_horizontal)
+
+    def _make_horizontal(self,_):
+        self.remove_class("vbox")
+        self.add_class("hbox")
+
+
+
 
 class SVGBuilderWidget(widgets.ContainerWidget):
     """SVGBuilderWidget is a wrapper for an SVG drawing GUI."""
@@ -186,18 +203,14 @@ class SVGBuilderWidget(widgets.ContainerWidget):
         self.stroke_picker = widgets.DropdownWidget(values = colours,description="Stroke colour:")
         self.stroke_width_slider = widgets.FloatSliderWidget(min=0,max=20,value=3,description="Stroke width:")
         
-        self.stroke_container = widgets.ContainerWidget()
-        self.stroke_container.remove_class("vbox")
-        self.stroke_container.add_class("hbox")
+        self.stroke_container = HorizontalContainerWidget()
         self.stroke_container.children = [self.stroke_picker,self.stroke_width_slider]
         
         # set up the fill controls
         self.fill_picker = widgets.DropdownWidget(values = ["none"] + colours,description="Fill colour:")
         self.fill_opacity_slider = widgets.FloatSliderWidget(min=0,max=1,value=0.5,description="Fill opacity:")
         
-        self.fill_container = widgets.ContainerWidget()
-        self.fill_container.remove_class("vbox")
-        self.fill_container.add_class("hbox")
+        self.fill_container = HorizontalContainerWidget()
         self.fill_container.children = [self.fill_picker,self.fill_opacity_slider]
         
         # the main SVG

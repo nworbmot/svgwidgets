@@ -25,6 +25,16 @@ an iPython notebook cell to start an SVG drawing GUI:
     builder
 
 
+## Screenshots
+
+The SVG drawing GUI allows you to draw SVG elements with the mouse:
+
+![SVG drawing GUI](screenshots/builder-crop.png)
+
+Or you can add elements with code:
+
+![code-added SVG](screenshots/algorithmically-crop.png)
+
 
 ## Licence (GPL3)
 
