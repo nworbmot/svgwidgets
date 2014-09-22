@@ -240,7 +240,9 @@ class SVGBuilderWidget(widgets.ContainerWidget):
 
 svg_class_dict = {}
 
-for class_name in filter(lambda name: name.endswith("Widget"), locals()):
+widget_class_names = list(filter(lambda name: name.endswith("Widget"), locals()))
+
+for class_name in widget_class_names:
 
     this_module = sys.modules[__name__]
     klass = getattr(this_module,class_name)
@@ -280,7 +282,7 @@ for class_name in filter(lambda name: name.endswith("Widget"), locals()):
 
 
     # now define the trailets with the correct traitlet.Type
-    for name,default in traitlets_dict.iteritems():
+    for name,default in traitlets_dict.items():
 
         try:
             default = float(default)
@@ -309,7 +311,7 @@ widget_properties = { class_name : {"tag_name" : klass.tag_name,
                                     "fertile" : klass.fertile,
                                     "view_name" : class_name.replace("Widget","View"),
                                     "attributes" : klass.attributes,
-                                    "draggable" : klass.draggable} for class_name,klass in svg_class_dict.iteritems() }
+                                    "draggable" : klass.draggable} for class_name,klass in svg_class_dict.items() }
 
 
 # set data in global scope
